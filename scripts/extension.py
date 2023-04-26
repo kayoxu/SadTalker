@@ -24,7 +24,7 @@ def check_all_files(current_dir):
 
     if not os.path.isdir(current_dir):
         return False
-    
+
     dirs = os.listdir(current_dir)
 
     for f in dirs:
@@ -33,13 +33,13 @@ def check_all_files(current_dir):
 
     return len(kv.keys()) == 0
 
-    
+
 
 def download_model(local_dir='./checkpoints'):
     REPO_ID = 'vinthony/SadTalker'
     snapshot_download(repo_id=REPO_ID, local_dir=local_dir, local_dir_use_symlinks=False)
 
-def get_source_image(image):   
+def get_source_image(image):
         return image
 
 def get_img_from_txt2img(x):
@@ -57,10 +57,10 @@ def get_img_from_img2img(x):
     imgs.sort(key=lambda x:os.path.getmtime(os.path.join(imgs_from_img_dir, x)))
     img_from_img_path = os.path.join(imgs_from_img_dir, imgs[-1])
     return img_from_img_path, img_from_img_path
- 
+
 def get_default_checkpoint_path():
     # check the path of models/checkpoints and extensions/
-    checkpoint_path = Path(paths.script_path) / "models"/ "SadTalker" 
+    checkpoint_path = Path(paths.script_path) / "models"/ "SadTalker"
     extension_checkpoint_path = Path(paths.script_path) / "extensions"/ "SadTalker" / "checkpoints"
 
     if check_all_files(checkpoint_path):
@@ -86,9 +86,10 @@ def install():
         "scipy":"scipy==1.8.1",
         "tqdm": "tqdm",
         "yacs":"yacs==0.1.8",
-        "yaml": "pyyaml", 
+        "yaml": "pyyaml",
         "av":"av",
         "gfpgan": "gfpgan",
+        "TTS": "tts",
     }
 
     if 'darwin' in sys.platform:
@@ -116,7 +117,7 @@ def install():
             please manually set the SADTALKER_CHECKPOINTS in `webui_user.bat`(windows) or `webui_user.sh`(linux)
             """
             )
-        
+
         # python = sys.executable
 
         # launch.run(f'"{python}" -m pip uninstall -y huggingface_hub', live=True)
@@ -126,19 +127,19 @@ def install():
         # # launch.run("cd " + paths.script_path+"/extensions/SadTalker && bash ./scripts/download_models.sh", live=True)
         # # print('SadTalker is successfully installed!')
         # download_model(paths.script_path+'/extensions/SadTalker/checkpoints')
-    
- 
+
+
 def on_ui_tabs():
     install()
 
-    sys.path.extend([paths.script_path+'/extensions/SadTalker']) 
-    
+    sys.path.extend([paths.script_path+'/extensions/SadTalker'])
+
     repo_dir = paths.script_path+'/extensions/SadTalker/'
 
     result_dir = opts.sadtalker_result_dir
     os.makedirs(result_dir, exist_ok=True)
 
-    from src.gradio_demo import SadTalker  
+    from src.gradio_demo import SadTalker
 
     if  os.getenv('SADTALKER_CHECKPOINTS'):
         checkpoint_path = os.getenv('SADTALKER_CHECKPOINTS')
@@ -146,7 +147,7 @@ def on_ui_tabs():
         checkpoint_path = repo_dir+'checkpoints/'
 
     sad_talker = SadTalker(checkpoint_path=checkpoint_path, config_path=repo_dir+'src/config', lazy_load=True)
-    
+
     with gr.Blocks(analytics_enabled=False) as audio_to_video:
         with gr.Row().style(equal_height=False):
             with gr.Column(variant='panel'):
@@ -154,11 +155,11 @@ def on_ui_tabs():
                     with gr.TabItem('Upload image'):
                         with gr.Row():
                             input_image = gr.Image(label="Source image", source="upload", type="filepath").style(height=256,width=256)
-                        
+
                         with gr.Row():
                             submit_image2 = gr.Button('load From txt2img', variant='primary')
                             submit_image2.click(fn=get_img_from_txt2img, inputs=input_image, outputs=[input_image, input_image])
-                            
+
                             submit_image3 = gr.Button('load from img2img', variant='primary')
                             submit_image3.click(fn=get_img_from_img2img, inputs=input_image, outputs=[input_image, input_image])
 
@@ -168,9 +169,9 @@ def on_ui_tabs():
 
                             with gr.Row():
                                 driven_audio = gr.Audio(label="Input audio", source="upload", type="filepath")
-                        
 
-            with gr.Column(variant='panel'): 
+
+            with gr.Column(variant='panel'):
                 with gr.Tabs(elem_id="sadtalker_checkbox"):
                     with gr.TabItem('Settings'):
                         with gr.Column(variant='panel'):
@@ -185,16 +186,16 @@ def on_ui_tabs():
                         gen_video = gr.Video(label="Generated video", format="mp4").style(width=256)
 
 
-        ### gradio gpu call will always return the html, 
+        ### gradio gpu call will always return the html,
         submit.click(
-                    fn=wrap_queued_call(sad_talker.test), 
+                    fn=wrap_queued_call(sad_talker.test),
                     inputs=[input_image,
                             driven_audio,
                             preprocess_type,
                             is_still_mode,
                             enhancer,
                             path_to_save
-                            ], 
+                            ],
                     outputs=[gen_video, ]
                     )
 
@@ -202,8 +203,8 @@ def on_ui_tabs():
 
 def on_ui_settings():
     talker_path = Path(paths.script_path) / "outputs"
-    section = ('extension', "SadTalker") 
-    opts.add_option("sadtalker_result_dir", OptionInfo(str(talker_path / "SadTalker/"), "Path to save results of sadtalker", section=section)) 
+    section = ('extension', "SadTalker")
+    opts.add_option("sadtalker_result_dir", OptionInfo(str(talker_path / "SadTalker/"), "Path to save results of sadtalker", section=section))
 
 script_callbacks.on_ui_settings(on_ui_settings)
 script_callbacks.on_ui_tabs(on_ui_tabs)
